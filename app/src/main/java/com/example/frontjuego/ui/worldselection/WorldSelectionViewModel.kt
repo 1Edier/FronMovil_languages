@@ -3,15 +3,18 @@ package com.example.frontjuego.ui.worldselection
 import com.example.frontjuego.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-
 import com.example.frontjuego.network.RetrofitClient
 import com.example.frontjuego.network.WorldInfoResponse
+import com.example.frontjuego.util.SessionManager
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.awaitAll
 
 // Estado de la UI para la pantalla de selección de mundos
 data class WorldSelectionUiState(
@@ -27,32 +30,72 @@ class WorldSelectionViewModel : ViewModel() {
 
     private val apiService = RetrofitClient.instance
 
-    // Se llama automáticamente cuando el ViewModel es creado por primera vez
+    // El init se mantiene para la carga inicial.
     init {
-        fetchWorlds()
+        loadWorlds()
     }
 
-    private fun fetchWorlds() {
+    // --- ¡CORRECCIÓN CLAVE! ---
+    // La función AHORA se llama `loadWorlds` y es pública (sin `private`).
+    // Este es el cambio que soluciona el error "Unresolved reference".
+    fun loadWorlds() {
         viewModelScope.launch {
-            // 1. Poner la UI en estado de carga
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                // 2. Hacer la llamada a la API
-                // Usamos language_id = 1 como indicaste
-                // Usamos language_id = 1 como indicaste
-                val languageId = 1 // Puedes obtener este valor de donde necesites
-                val response = apiService.getAllWorlds(languageId = languageId) // Pasas el Int directamente
+                val userId = SessionManager.getUserId()
+                if (userId == -1) {
+                    _uiState.update { it.copy(isLoading = false, error = "Usuario no autenticado.") }
+                    return@launch
+                }
 
-                if (response.isSuccessful && response.body() != null) {
-                    val apiWorlds = response.body()!!.worlds
-                    // 3. Convertir la respuesta de la API al modelo de la UI
-                    val uiWorlds = apiWorlds.map { it.toUiModel() }
-                    _uiState.update {
-                        it.copy(isLoading = false, worlds = uiWorlds)
+                // Paso 1: Obtener la lista de mundos y el progreso del usuario en paralelo.
+                val worldsResponse = apiService.getAllWorlds(1) // languageId = 1
+                val progressResponse = apiService.getUserProgress(userId)
+
+                if (worldsResponse.isSuccessful && progressResponse.isSuccessful) {
+                    // Ordenamos los mundos por ID para asegurar una progresión lógica.
+                    val apiWorlds = worldsResponse.body()!!.worlds.sortedBy { it.id }
+                    val completedLevelsSet = progressResponse.body()!!.userProgress
+                        .filter { it.status == "completed" }
+                        .map { it.levelId }
+                        .toSet()
+
+                    // Paso 2: Obtener la lista de niveles para CADA mundo en paralelo.
+                    val levelsByWorldId = coroutineScope {
+                        apiWorlds.map { world ->
+                            async {
+                                val levels = apiService.getLevelsForWorld(world.id).body() ?: emptyList()
+                                world.id to levels
+                            }
+                        }.awaitAll().toMap()
                     }
+
+                    // Paso 3: Procesar los datos para determinar el estado de bloqueo.
+                    val processedWorlds = mutableListOf<World>()
+                    var canUnlockNextWorld = true // El primer mundo siempre está desbloqueado.
+
+                    for (apiWorld in apiWorlds) {
+                        val levelsForThisWorld = levelsByWorldId[apiWorld.id].orEmpty()
+
+                        // Un mundo se considera "completo" si todos sus niveles están en la lista de completados.
+                        val isThisWorldComplete = levelsForThisWorld.isNotEmpty() && levelsForThisWorld.all { level ->
+                            completedLevelsSet.contains(level.id)
+                        }
+
+                        val isLocked = !canUnlockNextWorld
+
+                        processedWorlds.add(apiWorld.toUiModel().copy(isLocked = isLocked))
+
+                        // Se puede desbloquear el *siguiente* mundo solo si el mundo *actual* está desbloqueado Y completo.
+                        canUnlockNextWorld = !isLocked && isThisWorldComplete
+                    }
+
+                    _uiState.update { it.copy(isLoading = false, worlds = processedWorlds) }
+
                 } else {
-                    // Manejar error de la API
-                    val errorBody = response.errorBody()?.string() ?: "Error desconocido al obtener los mundos"
+                    val errorBody = worldsResponse.errorBody()?.string()
+                        ?: progressResponse.errorBody()?.string()
+                        ?: "Error desconocido al obtener los mundos"
                     _uiState.update { it.copy(isLoading = false, error = errorBody) }
                 }
             } catch (e: Exception) {
@@ -66,29 +109,22 @@ class WorldSelectionViewModel : ViewModel() {
 /**
  * Función de extensión para convertir el modelo de la API (WorldInfoResponse)
  * al modelo que la UI necesita (World).
- * Esto nos permite mantener la UI sin cambios y añadir los datos que la API no nos da,
- * como la imagen, los colores, etc.
  */
 fun WorldInfoResponse.toUiModel(): World {
-    // Aquí puedes personalizar cómo se ve cada mundo.
-    // Usamos el ID para asignar imágenes y colores específicos.
     return World(
         id = this.id,
         name = this.name,
         description = this.description,
         detailedDescription = "Una nueva aventura te espera en el mundo de '${this.name}'. ¡Prepárate para aprender!",
-        difficulty = (this.id % 5) + 1, // Dificultad basada en el ID (ej: 1, 2, 3, 4, 5, 1...)
-        // Asignamos una imagen basado en el ID del mundo
+        difficulty = (this.id % 5) + 1,
         imageRes = when (this.id) {
-            1 -> R.drawable.saludos // Asume que tienes este drawable
-            2 -> R.drawable.animales // Asume que tienes este drawable
-            3 -> R.drawable.casa // Asume que tienes este drawable
+            1 -> R.drawable.saludos
+            2 -> R.drawable.animales
+            3 -> R.drawable.casa
             4 -> R.drawable.colores
             else -> R.drawable.bosque
         },
-        // Como indicaste, todos los mundos vienen desbloqueados
-        isLocked = false,
-        // Asignamos colores basados en el ID
+        isLocked = true,
         backgroundColor = when (this.id) {
             1 -> Color(0xFF4CAF50)
             2 -> Color(0xFF2196F3)
@@ -103,7 +139,6 @@ fun WorldInfoResponse.toUiModel(): World {
             4 -> Color(0xFFF06292)
             else -> Color(0xFFBA68C8)
         },
-        // Puedes poner valores por defecto para los demás campos
         completedLevels = 0,
         totalLevels = 10,
         xpReward = 100

@@ -10,7 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
 
     // USA ESTA IP PARA EL EMULADOR DE ANDROID STUDIO (se refiere al localhost de tu máquina)
-    private const val BASE_URL = "https://32959fb0d24c.ngrok-free.app"
+    private const val BASE_URL = " https://25131d972974.ngrok-free.app"
     // Si usas un dispositivo físico, reemplaza 10.0.2.2 con la IP de tu PC en la red local.
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

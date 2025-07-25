@@ -6,6 +6,8 @@ import com.example.frontjuego.network.FinishLevelRequest
 import com.example.frontjuego.network.LevelData
 import com.example.frontjuego.network.RetrofitClient
 import com.example.frontjuego.util.SessionManager
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -102,6 +104,7 @@ class GameViewModel(private val levelId: Int) : ViewModel() {
                         _uiState.update { it.copy(error = "Error al verificar respuesta.") }
                     }
                 } else if (exercise.exerciseType == "fill_in_word") {
+                    // Lógica hardcodeada, idealmente la respuesta vendría de la API
                     val isCorrect = currentState.typedAnswer.equals("días", ignoreCase = true)
                     val points = if (isCorrect) 100 else -10
                     _uiState.update {
@@ -146,6 +149,7 @@ class GameViewModel(private val levelId: Int) : ViewModel() {
         }
     }
 
+    // --- ¡FUNCIÓN MODIFICADA! ---
     private fun markLevelAsComplete() {
         viewModelScope.launch {
             val userId = SessionManager.getUserId()
@@ -162,14 +166,30 @@ class GameViewModel(private val levelId: Int) : ViewModel() {
             )
 
             try {
-                val response = apiService.finishLevel(userId, request)
-                if (response.isSuccessful) {
-                    println("Progreso del nivel guardado exitosamente: ${response.body()?.message}")
+                // Lanzamos ambas llamadas en paralelo para mayor eficiencia
+                val deferredResponses = awaitAll(
+                    async { apiService.finishLevel(userId, request) },
+                    async { apiService.updateUserProgress(userId, request) }
+                )
+
+                // Verificamos el resultado de la primera llamada (finishLevel)
+                val finishLevelResponse = deferredResponses[0]
+                if (finishLevelResponse.isSuccessful) {
+                    println("Progreso del nivel (finishLevel) guardado exitosamente: ${finishLevelResponse.body()?.message}")
                 } else {
-                    println("Error al guardar el progreso del nivel: ${response.errorBody()?.string()}")
+                    println("Error al guardar (finishLevel): ${finishLevelResponse.errorBody()?.string()}")
                 }
+
+                // Verificamos el resultado de la segunda llamada (updateUserProgress)
+                val updateUserProgressResponse = deferredResponses[1]
+                if (updateUserProgressResponse.isSuccessful) {
+                    println("Progreso del usuario (progressUpdate) guardado exitosamente: ${updateUserProgressResponse.body()?.message}")
+                } else {
+                    println("Error al guardar (progressUpdate): ${updateUserProgressResponse.errorBody()?.string()}")
+                }
+
             } catch (e: Exception) {
-                println("Excepción al guardar el progreso del nivel: ${e.message}")
+                println("Excepción al guardar el progreso del nivel en uno de los endpoints: ${e.message}")
             }
         }
     }
