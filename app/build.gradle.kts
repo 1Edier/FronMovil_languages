@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.frontjuego"
+    namespace = "com.mundosoft.frontjuego"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.frontjuego"
+        applicationId = "com.mundosoft.frontjuego"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
