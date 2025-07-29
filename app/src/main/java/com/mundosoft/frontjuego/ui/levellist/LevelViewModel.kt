@@ -13,12 +13,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Enum para el estado de cada nivel
+
 enum class LevelStatus {
     LOCKED, UNLOCKED, COMPLETED
 }
 
-// Modelo de datos que usará la UI, combinando el nivel y su estado
+// Modelo de datos que usará la UI
 data class UiLevel(
     val id: Int,
     val name: String,
@@ -41,11 +41,10 @@ class LevelListViewModel(private val worldId: Int) : ViewModel() {
     private val apiService = RetrofitClient.instance
 
     init {
-        // La carga inicial se mantiene aquí
+
         loadLevelsAndProgress()
     }
 
-    // --- ¡CAMBIO IMPORTANTE AQUÍ! ---
     // Hacemos la función pública para poder llamarla desde la UI cuando sea necesario.
     fun loadLevelsAndProgress() {
         viewModelScope.launch {
@@ -96,7 +95,7 @@ class LevelListViewModel(private val worldId: Int) : ViewModel() {
                     // Si el nivel no está completado, es el primero "desbloqueado" o está "bloqueado"
                     if (!firstUnlockedFound) {
                         firstUnlockedFound = true
-                        LevelStatus.UNLOCKED // El primer nivel no completado siempre está desbloqueado
+                        LevelStatus.UNLOCKED
                     } else {
                         LevelStatus.LOCKED
                     }

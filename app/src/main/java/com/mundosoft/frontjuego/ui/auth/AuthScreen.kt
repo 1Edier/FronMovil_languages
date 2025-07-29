@@ -59,11 +59,9 @@ fun AuthScreen(
     }
     LaunchedEffect(key1 = uiState.registrationSuccess) {
         if (uiState.registrationSuccess) {
-            // Ya no mostramos Toast aquí, el mensaje se muestra en la UI.
             // Cambiamos al modo login para que el usuario pueda entrar.
             authMode = AuthMode.LOGIN
-            // No reseteamos aquí para que el mensaje de éxito siga visible.
-            // Se reseteará al cambiar de modo o al intentar otra acción.
+
         }
     }
 
@@ -89,7 +87,7 @@ fun AuthScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -229,8 +227,7 @@ fun AuthScreen(
                         }
                     }
 
-                    // --- ¡SECCIÓN DE MENSAJES DE ESTADO MEJORADA! ---
-                    // Mensaje de Error
+
                     uiState.error?.let { error ->
                         StatusMessageCard(
                             message = error,

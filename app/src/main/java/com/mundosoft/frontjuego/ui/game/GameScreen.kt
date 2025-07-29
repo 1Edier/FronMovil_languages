@@ -1,45 +1,50 @@
 package com.mundosoft.frontjuego.ui.game
 
+import android.content.Context
+import android.media.MediaPlayer
+import androidx.annotation.RawRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable // <--- Add this import
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import kotlin.math.sin
-
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-
-import androidx.compose.foundation.layout.Box
-
-
-
-
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.mundosoft.frontjuego.R
 import kotlinx.coroutines.delay
+import kotlin.math.sin
 import kotlin.random.Random
 
-// Factory (sin cambios)
+// --- FUNCIÓN DE AYUDA PARA REPRODUCIR SONIDOS ---
+private fun playSound(context: Context, @RawRes soundResId: Int) {
+
+    val mediaPlayer = MediaPlayer.create(context, soundResId)
+    mediaPlayer.setOnCompletionListener { mp ->
+        mp.release()
+    }
+    mediaPlayer.start()
+}
+
+// Factory del ViewModel (sin cambios)
 class GameViewModelFactory(private val levelId: Int) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
@@ -58,6 +63,17 @@ fun GameScreen(
 ) {
     val viewModel: GameViewModel = viewModel(factory = GameViewModelFactory(levelId))
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // Obtenemos el contexto para los sonidos
+
+    // --- Sonidos---
+
+    LaunchedEffect(uiState.answerState) {
+        when (uiState.answerState) {
+            AnswerState.CORRECT -> playSound(context, R.raw.sound_correct)
+            AnswerState.INCORRECT -> playSound(context, R.raw.sound_incorrect)
+            AnswerState.IDLE -> { /* No hacer nada en el estado inicial */ }
+        }
+    }
 
     val currentExercise = uiState.levelData?.exercises?.getOrNull(uiState.currentExerciseIndex)
     val progress = if (uiState.levelData?.exercises?.isNotEmpty() == true) {
@@ -143,7 +159,7 @@ fun GameScreen(
         }
     }
 
-    // --- ¡NUEVA ANIMACIÓN DE NIVEL COMPLETADO! ---
+    // --- MUESTRA LA ANIMACIÓN DE NIVEL COMPLETADO SI EL ESTADO ES ACTIVO ---
     if (uiState.isLevelComplete) {
         LevelCompleteAnimation(
             score = uiState.score,
@@ -159,13 +175,14 @@ fun GameScreen(
 fun LevelCompleteAnimation(score: Int, onDismiss: () -> Unit) {
     var isVisible by remember { mutableStateOf(false) }
 
+    // Efecto que se ejecuta una vez cuando aparece la animación
     LaunchedEffect(Unit) {
         isVisible = true
-        delay(4000) // Duración total de la animación antes de cerrar automáticamente
+        delay(4000)
         onDismiss()
     }
 
-    // Fondo semi-transparente que aparece gradualmente
+
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(animationSpec = tween(500)),
@@ -175,12 +192,16 @@ fun LevelCompleteAnimation(score: Int, onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.6f))
-                .clickable { onDismiss() },
+                .clickable(
+                    onClick = onDismiss,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ),
             contentAlignment = Alignment.Center
-        ) { /* Lambda de contenido explícita y vacía */ } // <--- AÑADE ESTAS LLAVES VACÍAS
+        ) { /* Este Box es solo para el fondo oscuro */ }
     }
 
-    // Contenido animado (tarjeta y confeti)
+    // Contenido principal de la animación
     AnimatedVisibility(
         visible = isVisible,
         enter = scaleIn(animationSpec = spring(
@@ -189,12 +210,33 @@ fun LevelCompleteAnimation(score: Int, onDismiss: () -> Unit) {
         )) + fadeIn(),
         exit = scaleOut() + fadeOut()
     ) {
-        Box(contentAlignment = Alignment.Center) { // Este Box ya tiene contenido
+        Box(contentAlignment = Alignment.Center) {
+            // Animación de confeti de fondo
             ConfettiAnimation()
+
+            // Tarjeta con el mensaje de "Nivel Completado"
             Card(
-                // ... el resto de tu código de Card
+                modifier = Modifier.padding(32.dp),
+                shape = RoundedCornerShape(24.dp), // Corregido
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                // ... el resto de tu código de Column
+                Column(
+                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "🎉 ¡Nivel Completado! 🎉",
+                        fontSize = 24.sp, // Corregido
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Puntuación: $score",
+                        fontSize = 20.sp // Corregido
+                    )
+                }
             }
         }
     }

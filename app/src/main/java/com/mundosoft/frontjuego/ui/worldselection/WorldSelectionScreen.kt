@@ -46,8 +46,7 @@ fun WorldSelectionScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    // --- ¡CAMBIO CLAVE! ---
-    // Este `LaunchedEffect` se ejecutará cada vez que la pantalla se muestre.
+
     // Cuando vuelvas de completar un mundo, se volverá a ejecutar, recargando los datos.
     LaunchedEffect(key1 = true) {
         viewModel.loadWorlds()

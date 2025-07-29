@@ -14,11 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// --- ¡ESTADO DE UI ACTUALIZADO! ---
 data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val successMessage: String? = null, // Para mensajes de éxito como el registro
+    val successMessage: String? = null,
     val loginSuccess: Boolean = false,
     val registrationSuccess: Boolean = false
 )
@@ -42,11 +41,11 @@ class AuthViewModel : ViewModel() {
                     SessionManager.saveUser(loginData.user.id, loginData.user.username)
                     _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
                 } else {
-                    // --- ¡MANEJO DE ERRORES MEJORADO! ---
+
                     val errorBody = response.errorBody()?.string()
                     val errorMessage = if (errorBody != null) {
                         try {
-                            // Intenta parsear el JSON de error para obtener el mensaje
+
                             gson.fromJson(errorBody, ApiErrorResponse::class.java).message
                         } catch (e: Exception) {
                             // Si falla el parseo, muestra un mensaje genérico amigable
@@ -69,7 +68,7 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = apiService.register(RegisterRequest(name, email, password))
                 if (response.isSuccessful) {
-                    // --- ¡MENSAJE DE ÉXITO MEJORADO! ---
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -78,7 +77,7 @@ class AuthViewModel : ViewModel() {
                         )
                     }
                 } else {
-                    // --- ¡MANEJO DE ERRORES MEJORADO! ---
+
                     val errorBody = response.errorBody()?.string()
                     val errorMessage = if (errorBody != null) {
                         try {

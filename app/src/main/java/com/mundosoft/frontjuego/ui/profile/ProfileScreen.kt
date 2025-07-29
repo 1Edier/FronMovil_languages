@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,12 +42,16 @@ import com.mundosoft.frontjuego.util.SessionManager
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = viewModel() // Inyectamos el ViewModel
+    viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val primaryColor = Color(0xFF4CAF50)
     val secondaryColor = Color(0xFF2196F3)
     val backgroundColor = Color(0xFFF5F5F5)
+
+    LaunchedEffect(key1 = true) {
+        viewModel.loadProfileData()
+    }
 
     Scaffold(
         topBar = {
@@ -84,7 +89,6 @@ fun ProfileScreen(
                     )
                 }
                 else -> {
-                    // Contenido cargado, mostramos el perfil
                     ProfileContent(
                         navController = navController,
                         username = uiState.username,
@@ -144,7 +148,6 @@ private fun ProfileContent(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    // El email no viene en la API, por lo que se omite.
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -175,10 +178,7 @@ private fun ProfileContent(
                 NoBadgesMessage()
             }
         } else {
-            // Ordenamos las insignias alfabéticamente por nombre
             val sortedBadges = badges.sortedBy { it.name }
-
-            // Mostramos las insignias en una cuadrícula de 2 columnas con tamaño fijo
             items(sortedBadges.chunked(2)) { badgeRow ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -189,10 +189,9 @@ private fun ProfileContent(
                             name = badge.name,
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 60.dp) // Altura mínima fija
+                                .heightIn(min = 60.dp)
                         )
                     }
-                    // Si hay solo una insignia en la fila, agregamos un spacer para balancear
                     if (badgeRow.size < 2) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -206,7 +205,7 @@ private fun ProfileContent(
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
-                    SessionManager.clearSession() // Limpiamos la sesión al salir
+                    SessionManager.clearSession()
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(navController.graph.startDestinationId) {
                             inclusive = true
@@ -304,7 +303,7 @@ fun BadgeItem(name: String, modifier: Modifier = Modifier) {
             Icon(
                 Icons.Default.EmojiEvents,
                 contentDescription = "Insignia",
-                tint = Color(0xFFFFC107), // Color dorado
+                tint = Color(0xFFFFC107),
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))

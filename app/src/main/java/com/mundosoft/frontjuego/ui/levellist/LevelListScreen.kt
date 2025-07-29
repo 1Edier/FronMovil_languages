@@ -51,11 +51,6 @@ fun LevelListScreen(
     val viewModel: LevelListViewModel = viewModel(factory = LevelListViewModelFactory(worldId))
     val uiState by viewModel.uiState.collectAsState()
 
-    // --- ¡CAMBIO IMPORTANTE AQUÍ! ---
-    // Este `LaunchedEffect` se ejecutará cada vez que esta pantalla se muestre.
-    // Cuando vuelvas de GameScreen, se volverá a ejecutar, recargando los datos.
-    // La clave `true` asegura que se ejecute al menos una vez y en recomposiciones
-    // si la pantalla sale y vuelve a entrar en el stack.
     LaunchedEffect(key1 = true) {
         viewModel.loadLevelsAndProgress()
     }

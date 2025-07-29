@@ -1,51 +1,72 @@
-    package com.mundosoft.frontjuego.util
+package com.mundosoft.frontjuego.util
 
-    import android.content.Context
-    import android.content.SharedPreferences
+import android.content.Context
+import android.content.SharedPreferences
 
-    object SessionManager {
+object SessionManager {
+    private const val PREFS_NAME = "front_juego_prefs"
+    private var sharedPreferences: SharedPreferences? = null
 
-        private const val PREFS_NAME = "juego_prefs"
-        private const val KEY_AUTH_TOKEN = "auth_token"
-        private const val KEY_USER_ID = "user_id"
-        private const val KEY_USERNAME = "username"
+    // Claves para guardar los datos
+    private const val KEY_AUTH_TOKEN = "auth_token"
+    private const val KEY_USER_ID = "user_id"
+    private const val KEY_USERNAME = "username"
 
+    private const val KEY_TOTAL_POINTS = "total_points"
 
-        private lateinit var prefs: SharedPreferences
-
-        fun init(context: Context) {
-            prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        }
-
-        fun saveAuthToken(token: String) {
-            val editor = prefs.edit()
-            editor.putString(KEY_AUTH_TOKEN, token)
-            editor.apply()
-        }
-
-        fun fetchAuthToken(): String? {
-            return prefs.getString(KEY_AUTH_TOKEN, null)
-        }
-
-        fun saveUser(userId: Int, username: String) {
-            val editor = prefs.edit()
-            editor.putInt(KEY_USER_ID, userId)
-            editor.putString(KEY_USERNAME, username)
-            editor.apply()
-        }
-
-        fun getUserId(): Int {
-            // Devuelve -1 si no se encuentra, para manejar el caso de error
-            return prefs.getInt(KEY_USER_ID, -1)
-        }
-
-        fun getUsername(): String? {
-            return prefs.getString(KEY_USERNAME, null)
-        }
-
-        fun clearSession() {
-            val editor = prefs.edit()
-            editor.clear()
-            editor.apply()
+    fun init(context: Context) {
+        if (sharedPreferences == null) {
+            sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
     }
+
+    private val editor: SharedPreferences.Editor?
+        get() = sharedPreferences?.edit()
+
+    fun saveAuthToken(token: String) {
+        editor?.putString(KEY_AUTH_TOKEN, token)?.apply()
+    }
+
+    fun getAuthToken(): String? {
+        return sharedPreferences?.getString(KEY_AUTH_TOKEN, null)
+    }
+
+    fun saveUser(userId: Int, username: String) {
+        editor?.apply {
+            putInt(KEY_USER_ID, userId)
+            putString(KEY_USERNAME, username)
+            apply()
+        }
+    }
+
+    fun getUserId(): Int {
+        return sharedPreferences?.getInt(KEY_USER_ID, -1) ?: -1
+    }
+
+    fun getUsername(): String? {
+        return sharedPreferences?.getString(KEY_USERNAME, null)
+    }
+
+
+    /**
+     *  iniciar sesión o en la primera carga del perfil.
+     */
+    fun saveTotalPoints(points: Int) {
+        editor?.putInt(KEY_TOTAL_POINTS, points)?.apply()
+    }
+
+    fun getTotalPoints(): Int {
+        return sharedPreferences?.getInt(KEY_TOTAL_POINTS, 0) ?: 0
+    }
+
+    fun addPoints(pointsToAdd: Int) {
+        val currentPoints = getTotalPoints()
+        val newTotal = currentPoints + pointsToAdd
+        saveTotalPoints(newTotal)
+        println("PUNTOS_LOCALES: Se añadieron $pointsToAdd puntos. Nuevo total local: $newTotal")
+    }
+
+    fun clearSession() {
+        editor?.clear()?.apply()
+    }
+}

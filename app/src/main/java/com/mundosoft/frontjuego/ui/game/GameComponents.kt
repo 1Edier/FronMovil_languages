@@ -32,12 +32,12 @@ fun MultipleChoiceExercise(
 ) {
     val context = LocalContext.current
 
-    // Corregir la inicialización de TextToSpeech
+
     val textToSpeech = remember {
         var tts: TextToSpeech? = null
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                // Ahora podemos usar 'tts' de forma segura
+
                 tts?.language = Locale.US
             }
         }
@@ -83,7 +83,7 @@ fun MultipleChoiceExercise(
             OutlinedButton(
                 onClick = {
                     if (!isAnswered) {
-                        // Usar textToSpeech de forma segura
+
                         textToSpeech?.speak(
                             option.vocabulary.foreignWord,
                             TextToSpeech.QUEUE_FLUSH,

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Estado de la UI para la pantalla de perfil
+// ... (data class ProfileUiState no cambia)
 data class ProfileUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -33,7 +33,8 @@ class ProfileViewModel : ViewModel() {
         loadProfileData()
     }
 
-    private fun loadProfileData() {
+
+    fun loadProfileData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -45,24 +46,35 @@ class ProfileViewModel : ViewModel() {
                 return@launch
             }
 
-            // Actualizamos el nombre de usuario inmediatamente desde la sesión
             _uiState.update { it.copy(username = username) }
 
             try {
-                // Hacemos ambas llamadas en paralelo para mayor eficiencia
                 coroutineScope {
+                    // Seguimos llamando a la API para obtener insignias y otros datos
                     val profileDeferred = async { apiService.getUserProfile(userId) }
                     val badgesDeferred = async { apiService.getUserBadges(userId) }
 
                     val profileResponse = profileDeferred.await()
                     val badgesResponse = badgesDeferred.await()
 
-                    // Verificamos si ambas respuestas son exitosas
                     if (profileResponse.isSuccessful && badgesResponse.isSuccessful) {
-                        val profileData = profileResponse.body()?.userProfile
+                        var profileData = profileResponse.body()?.userProfile
                         val badgesData = badgesResponse.body()?.userBadges ?: emptyList()
 
                         if (profileData != null) {
+
+                            val localTotalPoints = SessionManager.getTotalPoints()
+
+
+
+                            if (localTotalPoints == 0 && profileData.totalPoints > 0) {
+                                SessionManager.saveTotalPoints(profileData.totalPoints)
+                            }
+
+                            profileData = profileData.copy(totalPoints = SessionManager.getTotalPoints())
+
+                            println("PUNTOS_LOCALES: Mostrando perfil con ${profileData.totalPoints} puntos locales.")
+
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,

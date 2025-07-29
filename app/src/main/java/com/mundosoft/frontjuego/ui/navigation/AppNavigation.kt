@@ -17,7 +17,6 @@ sealed class Screen(val route: String) {
     object WorldSelection : Screen("world_selection_screen")
     object Profile : Screen("profile_screen")
     object LevelList : Screen("level_list_screen/{worldId}/{worldName}")
-    // <-- AÑADIR NUEVA RUTA DE JUEGO -->
     object Game : Screen("game_screen/{levelId}")
 }
 
@@ -28,7 +27,6 @@ fun AppNavHost() {
         navController = navController,
         startDestination = Screen.Auth.route
     ) {
-        // ... (composable para Auth y WorldSelection sin cambios) ...
 
         composable(route = Screen.Auth.route) {
             AuthScreen(
@@ -64,16 +62,14 @@ fun AppNavHost() {
                     worldId = worldId,
                     worldName = worldName,
                     navController = navController,
-                    // <-- ¡CAMBIO IMPORTANTE AQUÍ! -->
                     onLevelSelected = { levelId ->
-                        // Navegamos a la pantalla de juego
                         navController.navigate("game_screen/$levelId")
                     }
                 )
             }
         }
 
-        // <-- AÑADIR NUEVO COMPOSABLE PARA LA PANTALLA DE JUEGO -->
+
         composable(
             route = Screen.Game.route,
             arguments = listOf(
